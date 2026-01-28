@@ -2,6 +2,10 @@ name = "noname-server"
 main = "src/index.js"
 compatibility_date = "2026-01-28"
 
+routes = [
+  { pattern = "play.quaternijkon.online/ws*", zone_name = "quaternijkon.online" }
+]
+
 [durable_objects]
 bindings = [{ name = "LOBBY_DO", class_name = "LobbyDurableObject" }]
 
@@ -23,7 +27,3 @@ invocation_logs = true
 enabled = false
 persist = true
 head_sampling_rate = 1
-
-routes = [
-  { pattern = "play.quaternijkon.online/ws*", zone_name = "quaternijkon.online" }
-]
