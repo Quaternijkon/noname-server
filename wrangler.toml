@@ -7,4 +7,4 @@ bindings = [{ name = "LOBBY_DO", class_name = "LobbyDurableObject" }]
 
 [[migrations]]
 tag = "v1"
-new_classes = ["LobbyDurableObject"]
+new_sqlite_classes = ["LobbyDurableObject"]
