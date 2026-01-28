@@ -71,6 +71,15 @@ export class LobbyDurableObject {
 				ws.close();
 				continue;
 			}
+			
+			// Game Idle Timeout (1 hour)
+			// Prevent zombie connections from keeping the object awake forever (every 10s)
+			if (now - client.lastGameActivity > 3600 * 1000) {
+				// Optional: send a reason before closing
+				// this.sendl(client, "denied", "idle");
+				ws.close();
+				continue;
+			}
 
 			// Heartbeat Logic (60 seconds)
 			if (now - client.lastActivity > 60000) {
@@ -141,6 +150,7 @@ export class LobbyDurableObject {
 			clientIp,
 			connectTime: Date.now(),
 			lastActivity: Date.now(),
+			lastGameActivity: Date.now(), // 记录最后一次游戏/交互操作的时间
 			beatWaiting: false,
 		};
 
@@ -197,6 +207,10 @@ export class LobbyDurableObject {
 		if (msg === "heartbeat") {
 			return;
 		}
+
+		// Update game activity (non-heartbeat message)
+		client.lastGameActivity = Date.now();
+
 		if (client.owner) {
 			this.sendl(client.owner, "onmessage", client.wsid, msg);
 			return;
@@ -256,12 +270,42 @@ export class LobbyDurableObject {
 
 		for (let i = 0; i < this.rooms.length; i++) {
 			if (this.rooms[i].owner === client) {
+				// 尝试寻找新房主
+				let newOwner = null;
 				for (const [, other] of this.clients) {
 					if (other.room === this.rooms[i] && other !== client) {
-						this.sendl(other, "selfclose");
+						newOwner = other;
+						break; // 找到第一个幸存者
 					}
 				}
-				this.rooms.splice(i--, 1);
+
+				if (newOwner) {
+					// 转移房主权限
+					const room = this.rooms[i];
+					room.owner = newOwner;
+					newOwner.owner = null; // 它是新房主，不再是客机
+					
+					// 通知新房主 (如果需要客户端特定协议支持，这里可能只起到维持房间的作用)
+					// 注意：Noname 客户端可能没有处理 "transferOwner" 的逻辑。
+					// 但这里的核心目标是“不解散房间”。
+					// 我们可以尝试发送一个系统消息或者更新状态。
+					
+					// 更新房间内其他人的归属
+					for (const [, other] of this.clients) {
+						if (other.room === room && other !== newOwner) {
+							// 客机现在归属于新房主
+							other.owner = newOwner;
+							// 此时我们不发送 selfclose，而是让它们保持连接
+						}
+					}
+					
+					// 可选：如果之前的房主是 servermode，新房主继承 servermode 状态？
+					// 暂不处理复杂状态继承，仅维持连接。
+					
+				} else {
+					// 真的没人了，销毁房间
+					this.rooms.splice(i--, 1);
+				}
 			}
 		}
 
