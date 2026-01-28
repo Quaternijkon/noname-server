@@ -6,6 +6,8 @@ routes = [
   { pattern = "play.quaternijkon.online/ws*", zone_name = "quaternijkon.online" }
 ]
 
+workers_dev = true
+
 [durable_objects]
 bindings = [{ name = "LOBBY_DO", class_name = "LobbyDurableObject" }]
 
